@@ -3,9 +3,11 @@ package com.example.covid19tracker
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import android.view.LayoutInflater
 import android.widget.TextView
 import androidx.lifecycle.LiveData
 import com.google.gson.Gson
+import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -15,13 +17,18 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
+
+    lateinit var stateAdapter: StateAdapter
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
+        supportActionBar?.hide()
+        // Inflate header for COVID 19 cases from item_header.xml
+        list.addHeaderView(LayoutInflater.from(this).inflate(R.layout.item_header, list, false))
         fetchResults()
     }
-
+    // ROBO POJO Generator
     private fun fetchResults() {
         GlobalScope.launch {
             val response = withContext(Dispatchers.IO)
@@ -30,11 +37,17 @@ class MainActivity : AppCompatActivity() {
                 val data = Gson().fromJson(response.body?.string(), Response::class.java)
                 launch(Dispatchers.Main) {
                     bindCombinedData(data.statewise[0])
+                    bindStateWiseData(data.statewise.subList(1,data.statewise.size))
                 }
             }
         }
     }
-
+    // Function for combining data statewise in LisView
+    private fun bindStateWiseData(subList: List<StatewiseItem>) {
+        stateAdapter = StateAdapter(subList)
+        list.adapter = stateAdapter
+    }
+    // Function for combining all the data in the container
     private fun bindCombinedData(data: StatewiseItem?) {
         val lastUpdatedTime: String? = data?.lastupdatedtime
         val simpleDateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm:ss")
@@ -60,7 +73,7 @@ class MainActivity : AppCompatActivity() {
 
 
     }
-
+    // Function for time format
     fun getTimeAgo(past: Date): String {
         val now = Date()
         val seconds = TimeUnit.MILLISECONDS.toSeconds(now.time - past.time)
